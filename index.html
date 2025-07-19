@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tomb Puzzle Helper</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪦</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://site-assets.fontawesome.com/releases/v6.6.0/css/all.css" rel="stylesheet">
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #0d0221;
+      color: #f0f0f0;
+      font-family: 'Inter', sans-serif;
+      position: relative;
+      z-index: 0;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .main-content {
+      flex: 1;
+      text-align: center;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #C169FF;
+      font-size: 40px;
+      text-shadow: 0 0 32px rgba(146, 21, 230, 0.8), 0 0 30px rgba(193, 105, 255, 0.8);
+      margin-bottom: 30px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 12px;
+      justify-content: center;
+      margin: 25px 0;
+    }
+
+    .cell {
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  transition: transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+    .up {
+      background-color: #00c853;
+      color: #0d0221;
+    }
+
+    .down {
+      background-color: #d50000;
+      color: #fff;
+    }
+
+    .cell:hover {
+      transform: scale(1.08);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    button {
+      font-size: 1.1rem;
+      padding: 10px 30px;
+      background-color: #C169FF;
+      color: #0d0221;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #d288ff;
+    }
+
+    .solution {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: #eeba30;
+    }
+    
+    /*Stars background used with permission from Sorta*/ 
+
+    .stars {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      background-color: white;
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+    
+    #footer-note {
+      text-align: center;
+      font-size: 16px;
+      color: #ccc;
+      padding: 20px;
+    }
+    
+    #page-links {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    #page-links a {
+      color: #c169ff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    #page-links a:hover {
+      text-decoration: underline;
+    }
+    
+    .instructions {
+      background: #1f1f1f;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 30px 0;
+      font-size: 16px;
+      color: #ccc;
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <h1>🪦 Tomb Puzzle Helper 🪦</h1>
+    <p class="instructions">
+  Click the buttons below to match the raised tombstones in-game.<br>
+  <i>(Green = raised, red = lowered)</i><br><br>
+  Then press <strong>Solve</strong> to see which ones to click to raise them all.<br><br>
+  Once you have your Magic Coins, press <strong>Reset</strong> to start again!
+  </p>
+    <div class="grid" id="grid"></div>
+    <div class="controls">
+      <button id="solveBtn">Solve</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <div class="solution" id="solution"></div>
+    <div class="stars" id="stars"></div>
+  </div>
+  
+  <div id="page-links">
+    <a href="https://xenoso.space/" target="_blank">🌐 Main Website</a> |
+    <a href="https://makinmagic.github.io/XenoSO/" target="_blank">🔎 Dashboard/Finder</a> |
+    <a href="https://xenoso.fandom.com/" target="_blank">ℹ️ Wiki</a> |
+    <a href="https://makinmagic.github.io/timer/" target="_blank">⏲️ SMO Timer</a> |
+    <a href="https://makinmagic.github.io/pizza/" target="_blank">🍕 Pizza Helper</a>
+  </div>
+
+  <div id="footer-note">Made from a 🪦 for XenoSO by Mr Teddy (upon request!)</div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const solutionDiv = document.getElementById('solution');
+    const buttons = [];
+    let state = Array(9).fill(0);
+
+    function updateUI() {
+      for (let i = 0; i < 9; i++) {
+        buttons[i].className = 'cell ' + (state[i] ? 'up' : 'down');
+      }
+    }
+
+    function toggle(index, arr) {
+      const row = Math.floor(index / 3);
+      const col = index % 3;
+      const positions = [index];
+
+      if (row > 0) positions.push(index - 3);
+      if (row < 2) positions.push(index + 3);
+      if (col > 0) positions.push(index - 1);
+      if (col < 2) positions.push(index + 1);
+
+      for (const i of positions) arr[i] ^= 1;
+    }
+
+    // Create grid buttons
+    for (let i = 0; i < 9; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'cell down';
+      btn.dataset.index = i;
+      btn.textContent = i + 1;
+      btn.onclick = () => {
+        state[i] ^= 1;
+        updateUI();
+      };
+      buttons.push(btn);
+      grid.appendChild(btn);
+    }
+
+    document.getElementById('solveBtn').onclick = () => {
+      const original = [...state];
+      for (let mask = 0; mask < 512; mask++) {
+        const test = [...original];
+        for (let i = 0; i < 9; i++) {
+          if ((mask >> i) & 1) toggle(i, test);
+        }
+        if (test.every(v => v === 1)) {
+          const result = [];
+          for (let i = 0; i < 9; i++) {
+            if ((mask >> i) & 1) result.push(i + 1);
+          }
+          solutionDiv.textContent = 'Click on these tombs: ' + result.join(', ');
+          return;
+        }
+      }
+      solutionDiv.textContent = 'No solution found.';
+    };
+
+    document.getElementById('resetBtn').onclick = () => {
+      state = Array(9).fill(0);
+      updateUI();
+      solutionDiv.textContent = '';
+    };
+    
+    function generateStars() {
+      const starsContainer = document.getElementById("stars");
+      const numStars = 100;
+
+      for (let i = 0; i < numStars; i++) {
+        const star = document.createElement("div");
+        star.classList.add("star");
+        const size = Math.random() * 2 + 1 + "px";
+        star.style.width = size;
+        star.style.height = size;
+        star.style.top = Math.random() * 100 + "%";
+        star.style.left = Math.random() * 100 + "%";
+        star.style.animation = `twinkle ${Math.random() * 5 + 5}s infinite`;
+        starsContainer.appendChild(star);
+      }
+    }
+
+    updateUI();
+    
+    window.onload = () => {
+      generateStars();
+    };
+    
+  </script>
+</body>
+</html>
